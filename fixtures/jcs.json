@@ -1,5 +1,5 @@
 {
-  "_comment": "Cross-implementation JCS (RFC 8785) fixtures. Each entry's canonical SHA-256 must be byte-identical across all four cores. Where `expected_canonical` is present, the canonical UTF-8 string MUST match exactly — that field is the normative golden output (hand-verifiable against RFC 8785), defending against the case where all four implementations drift identically.",
+  "_comment": "Cross-implementation conformance fixtures for the Handshake protocol. JCS canonical SHA-256 must be byte-identical across all four cores. Where `expected_canonical` is present, the canonical UTF-8 string MUST match exactly — that field is the normative golden output (hand-verifiable against RFC 8785), defending against the case where all four implementations drift identically. The IEEE-754 block exercises the ECMAScript 6.1.6.1 Number→String algorithm RFC 8785 §3.2.2.3 prescribes (per RFC 8785 Appendix B). The Ed25519 KAT block is RFC 8032 §7.1 Test 1; the ML-DSA-65 KAT block is a Handshake-specific deterministic vector — see _mldsa65_kat_comment.",
   "fixtures": [
     {
       "name": "empty_object",
@@ -61,6 +61,21 @@
       "input": "héllo こんにちは",
       "expected_canonical": "\"héllo こんにちは\""
     },
+
+    { "_comment_ieee754": "These fixtures pin RFC 8785 §3.2.2.3 (ECMAScript 6.1.6.1 Number→String) outputs. Sourced from RFC 8785 Appendix B and the json-canonicalization reference test corpus. Hand-verifiable: pipe each input value through Node.js `JSON.stringify(Number(x))` to reproduce." },
+
+    { "name": "ieee754_4_50",         "input": 4.50,                                "expected_canonical": "4.5" },
+    { "name": "ieee754_0_002",        "input": 0.002,                               "expected_canonical": "0.002" },
+    { "name": "ieee754_1e_minus_7",   "input": 1e-7,                                "expected_canonical": "1e-7" },
+    { "name": "ieee754_1e30",         "input": 1e30,                                "expected_canonical": "1e+30" },
+    { "name": "ieee754_1e21",         "input": 1e21,                                "expected_canonical": "1e+21" },
+    { "name": "ieee754_1e20",         "input": 1e20,                                "expected_canonical": "100000000000000000000" },
+    { "name": "ieee754_neg_zero",     "input": -0.0,                                "expected_canonical": "0" },
+    { "name": "ieee754_one_third",    "input": 0.333333333333333314829616256247390992939472198486328125, "expected_canonical": "0.3333333333333333" },
+    { "name": "ieee754_max_safe_int", "input": 9007199254740991,                    "expected_canonical": "9007199254740991" },
+    { "name": "ieee754_avogadro",     "input": 6.02214076e23,                       "expected_canonical": "6.02214076e+23" },
+    { "name": "ieee754_planck",       "input": 6.62607015e-34,                      "expected_canonical": "6.62607015e-34" },
+
     {
       "name": "delegation_token_unsigned",
       "input": {
@@ -114,5 +129,13 @@
     "public_key_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
     "message_hex": "",
     "signature_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+  },
+  "_mldsa65_kat_comment": "ML-DSA-65 (FIPS 204) deterministic KAT. Each runner derives the keypair from the 32-byte seed (FIPS 204 ξ), then deterministically signs the message (FIPS 204 §5.5 with empty context). Wire-format byte-equality is verified by hashing the public key (1952 B) and signature (3309 B) — pinning the digests instead of the raw bytes keeps the fixture file small. Both digests below were produced by the canonical Rust core (RustCrypto `ml-dsa` 0.0.4) AND independently reproduced by the Go core (`cloudflare/circl` v1.6.1) before pinning. Verifies the FIPS 204 keygen + deterministic-signing interop across implementations.",
+  "mldsa65_kat": {
+    "name": "handshake_mldsa65_deterministic_v1",
+    "seed_hex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+    "message_utf8": "handshake-mldsa65-kat-v1",
+    "expected_public_key_sha256": "b7acce2ddb11f8cc1aa46e2bafac6eacfa2b732ef192bd636ad8d3a56d649c66",
+    "expected_signature_sha256": "a8f4ba6885ee507857ccddc9eb59c4e9903c5cf666f4ed81674563546f5fdbda"
   }
 }

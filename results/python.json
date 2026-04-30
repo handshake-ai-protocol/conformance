@@ -51,6 +51,50 @@
       "sha256": "8371dab88108a4c68bfffe871a02405736dc5e306709cbf155ef3ac5d9b7206e"
     },
     {
+      "name": "ieee754_4_50",
+      "sha256": "32209ccbf8a8e509b9027698cc173343a2695e8ecdbe899bf5335a3100c956fc"
+    },
+    {
+      "name": "ieee754_0_002",
+      "sha256": "8d938122d3904436fd32a463678148c7b7595bf667f263a65ab79059e5833a21"
+    },
+    {
+      "name": "ieee754_1e_minus_7",
+      "sha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22"
+    },
+    {
+      "name": "ieee754_1e30",
+      "sha256": "7412d94bdf30adfa71080e057185e1a8de86e2e99a8350b011df8ac41ed5a6e3"
+    },
+    {
+      "name": "ieee754_1e21",
+      "sha256": "241c4643fa70b1dcde1205b71be4e3bebb17e9f880c8e1a33d0ead6c27271d3c"
+    },
+    {
+      "name": "ieee754_1e20",
+      "sha256": "c344e9487bfbd5c4e03c9fb90d62a5dde5e00b54d55c46e9f4a803aea162b80c"
+    },
+    {
+      "name": "ieee754_neg_zero",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "name": "ieee754_one_third",
+      "sha256": "e965f1b975608cb0d1dad8c30d17e0fe1bdea42df938c0bdc29d75c97b45c44b"
+    },
+    {
+      "name": "ieee754_max_safe_int",
+      "sha256": "f40b423c2dd95ff2b2f027e22208f438cf7242862e5e746860e697308c9add26"
+    },
+    {
+      "name": "ieee754_avogadro",
+      "sha256": "dd3f8330929c794a1d689817b2fa82b483c629b311b2be34013ec97c3a3cc985"
+    },
+    {
+      "name": "ieee754_planck",
+      "sha256": "9b796ffa546c8638b93222f8d39b3cea644916bcdeeb65eaa4e699c65e4ae276"
+    },
+    {
       "name": "delegation_token_unsigned",
       "sha256": "c4a3e2dbee849e64fa99fb4f39758911e80143877d50be026a0a4edcc1876b42"
     },
@@ -61,6 +105,17 @@
   ],
   "ed25519_kat": {
     "name": "rfc8032_7_1_test_1",
+    "public_key_match": true,
+    "signature_match": true,
+    "verifies": true,
+    "passed": true
+  },
+  "mldsa65_kat": {
+    "name": "handshake_mldsa65_deterministic_v1",
+    "public_key_size": 1952,
+    "signature_size": 3309,
+    "public_key_sha256": "b7acce2ddb11f8cc1aa46e2bafac6eacfa2b732ef192bd636ad8d3a56d649c66",
+    "signature_sha256": "a8f4ba6885ee507857ccddc9eb59c4e9903c5cf666f4ed81674563546f5fdbda",
     "public_key_match": true,
     "signature_match": true,
     "verifies": true,
