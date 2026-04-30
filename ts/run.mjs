@@ -33,7 +33,14 @@ function hash(value) {
 }
 
 const FIXTURES = resolve(ROOT, "tests/conformance/fixtures/jcs.json");
-const VECTOR_001 = resolve(ROOT, "packages/handshake-spec/test-vectors/v0.2.3/core/001-valid-handshake.json");
+const VECTORS_DIR = resolve(ROOT, "packages/handshake-spec/test-vectors/v0.2.3/core");
+const VECTOR_001 = resolve(VECTORS_DIR, "001-valid-handshake.json");
+// Same vector set as the Rust conformance runner.
+const VECTOR_FILES = [
+  ["001-valid-handshake", "001-valid-handshake.json"],
+  ["002-expired-delegation", "002-expired-delegation.json"],
+  ["003-scope-exceeded", "003-scope-exceeded.json"],
+];
 
 async function readJson(p) {
   return JSON.parse(await readFile(p, "utf8"));
@@ -163,6 +170,113 @@ async function runVector001() {
   };
 }
 
+// Encode signatures as base64url without padding — the Rust verifier rejects
+// any other variant per `_common.json#/$defs/base64url`. Node's Buffer
+// supports the `base64url` encoding name natively since v16.
+function signLink(link, seedKeys) {
+  const seed = seedKeys[link.iss].seed;
+  const body = { ...link };
+  delete body.signature;
+  const canonical = canonicalize(body);
+  const sig = native.ed25519Sign(seed, canonical);
+  body.signature = Buffer.from(sig).toString("base64url");
+  return body;
+}
+
+function signRequest(req, seedKeys) {
+  const seed = seedKeys[req.iss].seed;
+  const body = { ...req };
+  delete body.signature;
+  const canonical = canonicalize(body);
+  const sig = native.ed25519Sign(seed, canonical);
+  body.signature = Buffer.from(sig).toString("base64url");
+  return body;
+}
+
+async function runVector(vectorId, vectorPath) {
+  const v = await readJson(vectorPath);
+  const context = v.context;
+  const publicKeys = context.public_keys ?? {};
+  const revokedPrincipals = context.registry_state?.revoked_principals ?? [];
+  const revokedDelegations = context.registry_state?.revoked_delegations ?? [];
+
+  // Synthesize a deterministic Ed25519 seed per DID via SHA-256(DID).
+  const seedKeys = {};
+  for (const did of Object.keys(publicKeys)) {
+    const seed = native.sha256(Buffer.from(did, "utf8"));
+    const kp = native.ed25519KeypairFromSeed(seed);
+    seedKeys[did] = { seed, publicKey: kp.publicKey };
+  }
+
+  const input = v.input;
+  const signedChain = [];
+  if (input.delegation) signedChain.push(signLink(input.delegation, seedKeys));
+  for (const link of input.delegation_chain ?? []) signedChain.push(signLink(link, seedKeys));
+
+  const request = { ...input.request, delegation_chain: signedChain };
+  const signedRequest = signRequest(request, seedKeys);
+
+  const pubKeys = {};
+  for (const [did, k] of Object.entries(seedKeys)) pubKeys[did] = k.publicKey;
+
+  const { verifyHandshakeRequest } = await import("../../../packages/handshake-ts/ts/verify.ts").catch(async () => {
+    // Fallback: call the FFI directly when the TS source isn't available
+    // (e.g. when running against a published wheel where only index.cjs ships).
+    return {
+      verifyHandshakeRequest: (req, keys, recv, now, opts = {}) => {
+        const payload = native.verifyHandshakeRequestJson(
+          JSON.stringify(req),
+          keys,
+          recv,
+          now,
+          opts.revokedPrincipals ?? [],
+          opts.revokedDelegations ?? [],
+        );
+        return JSON.parse(payload);
+      },
+    };
+  });
+
+  const result = verifyHandshakeRequest(signedRequest, pubKeys, signedRequest.aud, context.now, {
+    revokedPrincipals,
+    revokedDelegations,
+  });
+  const expected = v.expected ?? {};
+  const expectedResult = expected.result ?? "accept";
+  const actualResult = result.result;
+
+  let passed = actualResult === expectedResult;
+  if (expected.error_code !== undefined) {
+    passed = passed && result.error_code === expected.error_code;
+  }
+  if (expected.rejected_at_step !== undefined) {
+    passed = passed && result.rejected_at_step === expected.rejected_at_step;
+  }
+  const detail = result.detail ?? "";
+  for (const needle of expected.detail_must_include ?? []) {
+    passed = passed && detail.includes(needle);
+  }
+
+  return {
+    vector_id: vectorId,
+    expected_result: expectedResult,
+    expected_error_code: expected.error_code ?? null,
+    actual_result: actualResult,
+    actual_error_code: result.error_code ?? null,
+    actual_rejected_at_step: result.rejected_at_step ?? null,
+    detail,
+    passed,
+  };
+}
+
+async function runVectors() {
+  const out = [];
+  for (const [id, fname] of VECTOR_FILES) {
+    out.push(await runVector(id, resolve(VECTORS_DIR, fname)));
+  }
+  return out;
+}
+
 const report = {
   implementation: "typescript",
   spec_version: native.SPEC_VERSION,
@@ -170,5 +284,6 @@ const report = {
   ed25519_kat: await runEd25519Kat(),
   mldsa65_kat: await runMlDsa65Kat(),
   vector_001: await runVector001(),
+  vectors: await runVectors(),
 };
 process.stdout.write(JSON.stringify(report, null, 2) + "\n");

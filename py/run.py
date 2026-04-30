@@ -21,6 +21,7 @@ Report schema (per implementation):
 
 from __future__ import annotations
 
+import base64
 import binascii
 import copy
 import json
@@ -35,7 +36,15 @@ import handshake  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "jcs.json"
-VECTOR_001 = ROOT / "packages" / "handshake-spec" / "test-vectors" / "v0.2.3" / "core" / "001-valid-handshake.json"
+VECTORS_DIR = ROOT / "packages" / "handshake-spec" / "test-vectors" / "v0.2.3" / "core"
+VECTOR_001 = VECTORS_DIR / "001-valid-handshake.json"
+# Same vector set as the Rust conformance runner (kept in lock-step so the
+# Phase 2 dashboard can substring-match across implementations).
+VECTOR_FILES = [
+    ("001-valid-handshake", "001-valid-handshake.json"),
+    ("002-expired-delegation", "002-expired-delegation.json"),
+    ("003-scope-exceeded", "003-scope-exceeded.json"),
+]
 
 
 def _hash(value: Any) -> str:
@@ -161,6 +170,109 @@ def _run_vector_001() -> dict[str, Any]:
     }
 
 
+def _b64url_no_pad(b: bytes) -> str:
+    """Encode bytes as base64url without padding — the encoding the Rust
+    verifier expects per `_common.json#/$defs/base64url`."""
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii")
+
+
+def _sign_link(link: dict[str, Any], keys: dict[str, bytes]) -> dict[str, Any]:
+    """Replace `link.signature` with a real Ed25519 signature using the
+    issuer's freshly-generated keypair."""
+    issuer = link["iss"]
+    seed, _ = keys[issuer]
+    body = {k: v for k, v in link.items() if k != "signature"}
+    canonical = handshake.canonicalize(body)
+    sig = handshake.ed25519_sign(seed, canonical)
+    body["signature"] = _b64url_no_pad(sig)
+    return body
+
+
+def _sign_request(req: dict[str, Any], keys: dict[str, tuple[bytes, bytes]]) -> dict[str, Any]:
+    issuer = req["iss"]
+    seed, _ = keys[issuer]
+    body = {k: v for k, v in req.items() if k != "signature"}
+    canonical = handshake.canonicalize(body)
+    sig = handshake.ed25519_sign(seed, canonical)
+    body["signature"] = _b64url_no_pad(sig)
+    return body
+
+
+def _step_str_for(refusal_step: str | None) -> str | None:
+    return refusal_step  # already in canonical snake_case form from the FFI
+
+
+def _run_vector(vector_id: str, vector_path: Path) -> dict[str, Any]:
+    from handshake.verify import verify_handshake_request
+
+    v = json.loads(vector_path.read_text())
+    context = v["context"]
+    public_keys = context["public_keys"]
+    revoked_principals = context.get("registry_state", {}).get("revoked_principals", [])
+    revoked_delegations = context.get("registry_state", {}).get("revoked_delegations", [])
+
+    # Synthesize fresh keypairs for every DID in the vector. Reusing a
+    # 32-byte seed derived from the DID makes the runner deterministic
+    # across re-runs without leaking the synthesized key beyond this scope.
+    seed_keys: dict[str, tuple[bytes, bytes]] = {}
+    for did in public_keys:
+        seed = handshake.sha256(did.encode("utf-8"))
+        seed_pair, pub = handshake.ed25519_keypair_from_seed(seed)
+        seed_keys[did] = (seed_pair, pub)
+
+    inp = v["input"]
+    signed_chain = []
+    if "delegation" in inp:
+        signed_chain.append(_sign_link(inp["delegation"], seed_keys))
+    for link in inp.get("delegation_chain", []):
+        signed_chain.append(_sign_link(link, seed_keys))
+
+    request = dict(inp["request"])
+    request["delegation_chain"] = signed_chain
+    signed_request = _sign_request(request, seed_keys)
+
+    pub_keys = {did: pub for did, (_seed, pub) in seed_keys.items()}
+    receiver_did = signed_request["aud"]
+    now = context["now"]
+
+    result = verify_handshake_request(
+        signed_request,
+        keys=pub_keys,
+        receiver_did=receiver_did,
+        now=now,
+        revoked_principals=revoked_principals,
+        revoked_delegations=revoked_delegations,
+    )
+
+    expected = v.get("expected", {})
+    expected_result = expected.get("result", "accept")
+    actual_result = "accept" if result.accepted else "reject"
+
+    passed = actual_result == expected_result
+    if expected_code := expected.get("error_code"):
+        passed = passed and result.error_code == expected_code
+    if expected_step := expected.get("rejected_at_step"):
+        passed = passed and _step_str_for(result.rejected_at_step) == expected_step
+    detail = result.detail if not result.accepted else ""
+    for needle in expected.get("detail_must_include", []) or []:
+        passed = passed and (needle in (detail or ""))
+
+    return {
+        "vector_id": vector_id,
+        "expected_result": expected_result,
+        "expected_error_code": expected.get("error_code"),
+        "actual_result": actual_result,
+        "actual_error_code": result.error_code,
+        "actual_rejected_at_step": result.rejected_at_step,
+        "detail": detail,
+        "passed": bool(passed),
+    }
+
+
+def _run_all_vectors() -> list[dict[str, Any]]:
+    return [_run_vector(vid, VECTORS_DIR / fname) for vid, fname in VECTOR_FILES]
+
+
 def main() -> None:
     report = {
         "implementation": "python",
@@ -169,6 +281,7 @@ def main() -> None:
         "ed25519_kat": _run_ed25519_kat(),
         "mldsa65_kat": _run_mldsa65_kat(),
         "vector_001": _run_vector_001(),
+        "vectors": _run_all_vectors(),
     }
     json.dump(report, sys.stdout, indent=2)
     sys.stdout.write("\n")

@@ -124,7 +124,39 @@
   "vector_001": {
     "passed": true,
     "result": "accept",
-    "unsigned_delegation_sha256": "c4a3e2dbee849e64fa99fb4f39758911e80143877d50be026a0a4edcc1876b42",
-    "unsigned_request_sha256": "398c03631f76d215972e6855669f9f039962cb7204985269d5d5a491f57a5ca0"
-  }
+    "unsigned_delegation_sha256": "31667a98c24cdba41f54f0b9a8df81b7f2d334667c5212ab7877f4d7904bbb16",
+    "unsigned_request_sha256": "cd0f2168dbe5e00c4d78034ea0eceb785d8429f29acd5c62ee0f9c0d8c323c4b"
+  },
+  "vectors": [
+    {
+      "vector_id": "001-valid-handshake",
+      "expected_result": "accept",
+      "expected_error_code": null,
+      "actual_result": "accept",
+      "actual_error_code": null,
+      "actual_rejected_at_step": null,
+      "detail": "capability=billing.invoices.read effective={\"max_invoices\":100}",
+      "passed": true
+    },
+    {
+      "vector_id": "002-expired-delegation",
+      "expected_result": "reject",
+      "expected_error_code": "expired",
+      "actual_result": "reject",
+      "actual_error_code": "expired",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "detail": "delegation exp=2026-04-29T14:12:11Z is in the past relative to now=2026-04-29 14:30:00 UTC (±60s)",
+      "passed": true
+    },
+    {
+      "vector_id": "003-scope-exceeded",
+      "expected_result": "reject",
+      "expected_error_code": "scope_exceeded",
+      "actual_result": "reject",
+      "actual_error_code": "scope_exceeded",
+      "actual_rejected_at_step": "scope_intersection",
+      "detail": "requested max_invoices=500 exceeds delegated max 100",
+      "passed": true
+    }
+  ]
 }
