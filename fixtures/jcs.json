@@ -1,0 +1,118 @@
+{
+  "_comment": "Cross-implementation JCS (RFC 8785) fixtures. Each entry's canonical SHA-256 must be byte-identical across all four cores. Where `expected_canonical` is present, the canonical UTF-8 string MUST match exactly — that field is the normative golden output (hand-verifiable against RFC 8785), defending against the case where all four implementations drift identically.",
+  "fixtures": [
+    {
+      "name": "empty_object",
+      "input": {},
+      "expected_canonical": "{}"
+    },
+    {
+      "name": "empty_array",
+      "input": [],
+      "expected_canonical": "[]"
+    },
+    {
+      "name": "scalar_string",
+      "input": "hello",
+      "expected_canonical": "\"hello\""
+    },
+    {
+      "name": "scalar_int",
+      "input": 100,
+      "expected_canonical": "100"
+    },
+    {
+      "name": "scalar_negative_int",
+      "input": -42,
+      "expected_canonical": "-42"
+    },
+    {
+      "name": "scalar_zero",
+      "input": 0,
+      "expected_canonical": "0"
+    },
+    {
+      "name": "scalar_true",
+      "input": true,
+      "expected_canonical": "true"
+    },
+    {
+      "name": "scalar_null",
+      "input": null,
+      "expected_canonical": "null"
+    },
+    {
+      "name": "key_sort_two",
+      "input": { "b": 2, "a": 1 },
+      "expected_canonical": "{\"a\":1,\"b\":2}"
+    },
+    {
+      "name": "key_sort_nested",
+      "input": { "z": { "b": 2, "a": 1 }, "a": [3, 1, 2] },
+      "expected_canonical": "{\"a\":[3,1,2],\"z\":{\"a\":1,\"b\":2}}"
+    },
+    {
+      "name": "string_escapes",
+      "input": "quote=\" back=\\ tab=\t newline=\n cr=\r ctrl=\u0001",
+      "expected_canonical": "\"quote=\\\" back=\\\\ tab=\\t newline=\\n cr=\\r ctrl=\\u0001\""
+    },
+    {
+      "name": "unicode_passthrough",
+      "input": "héllo こんにちは",
+      "expected_canonical": "\"héllo こんにちは\""
+    },
+    {
+      "name": "delegation_token_unsigned",
+      "input": {
+        "version": "0.2.3",
+        "kind": "DelegationToken",
+        "id": "dt_01HK4ZQ7M3X9R5N2P8V0YJF7B3",
+        "iss": "did:hsk:user:alice@example.com",
+        "sub": "did:hsk:agent:z6MkfTr3vHt8KjLm2nP5qR9wY3xZ4aB6cD7eF8gH9iJ0kL1",
+        "aud": "did:hsk:agent:z6MkfTr3vHt8KjLm2nP5qR9wY3xZ4aB6cD7eF8gH9iJ0kL1",
+        "iat": "2026-04-29T14:02:11Z",
+        "nbf": "2026-04-29T14:02:11Z",
+        "exp": "2026-04-29T14:12:11Z",
+        "capabilities": [
+          {
+            "name": "billing.invoices.read",
+            "constraints": { "max_invoices": 100 },
+            "delegable": false
+          }
+        ],
+        "sub_delegation_depth_remaining": 0,
+        "alg": "EdDSA"
+      }
+    },
+    {
+      "name": "handshake_request_unsigned_minimal",
+      "input": {
+        "version": "0.2.3",
+        "kind": "HandshakeRequest",
+        "id": "hs_01HK4ZQ8N4Y0S6P3Q9W1ZK8C4",
+        "iss": "did:hsk:agent:z6MkfTr3vHt8KjLm2nP5qR9wY3xZ4aB6cD7eF8gH9iJ0kL1",
+        "aud": "did:hsk:svc:z6MkmW9pQrStUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEf",
+        "iat": "2026-04-29T14:14:32Z",
+        "nonce": "k7nQ9pX3vR2mT4uV6wY8zA",
+        "agent_attestation": {
+          "deployer": "did:hsk:org:z6MkqA1bC2dE3fG4hI5jK6lM7nO8pQ9rS0tU1vW2xY3zA4bC",
+          "model": "claude-sonnet-4-5",
+          "instance_id": "job-7f3a"
+        },
+        "capability": {
+          "name": "billing.invoices.read",
+          "constraints": { "max_invoices": 100 }
+        },
+        "alg": "EdDSA"
+      }
+    }
+  ],
+  "_ed25519_kat_comment": "RFC 8032 §7.1 Test 1 — deterministic Ed25519 KAT. Each runner re-derives the public key from the seed, signs the (empty) message, and asserts the signature equals the spec value byte-for-byte. Defends against subtle wrapper bugs (wrong DER framing, swapped endianness, etc.).",
+  "ed25519_kat": {
+    "name": "rfc8032_7_1_test_1",
+    "seed_hex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+    "public_key_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+    "message_hex": "",
+    "signature_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+  }
+}
