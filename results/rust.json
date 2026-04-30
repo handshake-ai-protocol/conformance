@@ -159,6 +159,58 @@
       "passed": true
     }
   ],
+  "error_code_vectors": [
+    {
+      "vector_id": "004-aud-mismatch",
+      "expected_result": "reject",
+      "expected_error_code": "aud_mismatch",
+      "actual_result": "reject",
+      "actual_error_code": "aud_mismatch",
+      "actual_rejected_at_step": "audience_check",
+      "detail": "request aud=did:hsk:svc:wrong-audience does not match receiver did:hsk:svc:expected-receiver",
+      "passed": true
+    },
+    {
+      "vector_id": "005-protocol-version-unsupported",
+      "expected_result": "reject",
+      "expected_error_code": "protocol_version_unsupported",
+      "actual_result": "reject",
+      "actual_error_code": "protocol_version_unsupported",
+      "actual_rejected_at_step": "schema_validation",
+      "detail": "expected version=0.2.3, got 9.9.9",
+      "passed": true
+    },
+    {
+      "vector_id": "006-credential-revoked",
+      "expected_result": "reject",
+      "expected_error_code": "credential_revoked",
+      "actual_result": "reject",
+      "actual_error_code": "credential_revoked",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "detail": "issuer principal did:hsk:user:alice@example.com is revoked",
+      "passed": true
+    },
+    {
+      "vector_id": "007-chain-broken",
+      "expected_result": "reject",
+      "expected_error_code": "chain_broken",
+      "actual_result": "reject",
+      "actual_error_code": "chain_broken",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "detail": "link iss=did:hsk:user:mallory@example.com does not match prior link sub=did:hsk:agent:agent1",
+      "passed": true
+    },
+    {
+      "vector_id": "008-not-yet-valid",
+      "expected_result": "reject",
+      "expected_error_code": "not_yet_valid",
+      "actual_result": "reject",
+      "actual_error_code": "not_yet_valid",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "detail": "delegation nbf=2026-04-29T15:00:00Z is in the future relative to now=2026-04-29 14:14:32 UTC (±60s)",
+      "passed": true
+    }
+  ],
   "replay_check": {
     "first_result": "accept",
     "second_result": "reject",

@@ -30,6 +30,7 @@ var vectorFiles = []struct {
 }
 
 const vectorsDir = "packages/handshake-spec/test-vectors/v0.2.3/core"
+const errorCodesDir = "tests/conformance/error_codes"
 
 const repoFixtures = "tests/conformance/fixtures/jcs.json"
 const repoVector001 = "packages/handshake-spec/test-vectors/v0.2.3/core/001-valid-handshake.json"
@@ -331,8 +332,16 @@ func runVector(rootDir, vectorID, vectorPath string) map[string]any {
                 panic(err)
         }
 
+        // Some error-code vectors (e.g. 004 aud_mismatch) deliberately set
+        // request.aud to a DID *different* from the receiver. Honour an
+        // explicit `input.receiver_did` override; otherwise default to req.Aud.
+        receiverDID := req.Aud
+        if rd, ok := input["receiver_did"].(string); ok && rd != "" {
+                receiverDID = rd
+        }
+
         ctx := &verifyPkg.Context{
-                ReceiverDID: req.Aud,
+                ReceiverDID: receiverDID,
                 Now:         now,
                 SkewSecs:    verifyPkg.DefaultSkewSecs,
                 Keys:        resolver,
@@ -397,6 +406,36 @@ func runVectors(rootDir string) []map[string]any {
         out := make([]map[string]any, 0, len(vectorFiles))
         for _, vf := range vectorFiles {
                 out = append(out, runVector(rootDir, vf.id, filepath.Join(vectorsDir, vf.fname)))
+        }
+        return out
+}
+
+// runErrorCodeVectors walks tests/conformance/error_codes/*.json — malformed
+// inputs whose only job is to assert every implementation returns the same
+// errorCode + rejected_at_step. The aggregator builds a cross-impl matrix.
+func runErrorCodeVectors(rootDir string) []map[string]any {
+        dir := filepath.Join(rootDir, errorCodesDir)
+        entries, err := os.ReadDir(dir)
+        if err != nil {
+                return []map[string]any{}
+        }
+        out := make([]map[string]any, 0, len(entries))
+        for _, e := range entries {
+                if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
+                        continue
+                }
+                full := filepath.Join(dir, e.Name())
+                rel, err := filepath.Rel(rootDir, full)
+                if err != nil {
+                        rel = full
+                }
+                var v map[string]any
+                mustReadJSON(full, &v)
+                vid, _ := v["vector_id"].(string)
+                if vid == "" {
+                        vid = e.Name()
+                }
+                out = append(out, runVector(rootDir, vid, rel))
         }
         return out
 }
@@ -488,8 +527,9 @@ func main() {
                 "ed25519_kat":    runEd25519KAT(root),
                 "mldsa65_kat":    runMLDSA65KAT(root),
                 "vector_001":     runVector001(root),
-                "vectors":        runVectors(root),
-                "replay_check":   runReplayCheck(root),
+                "vectors":            runVectors(root),
+                "error_code_vectors": runErrorCodeVectors(root),
+                "replay_check":       runReplayCheck(root),
         }
         enc := json.NewEncoder(os.Stdout)
         enc.SetIndent("", "  ")

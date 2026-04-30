@@ -1,0 +1,54 @@
+{
+  "vector_id": "005-protocol-version-unsupported",
+  "spec_version": "0.2.3",
+  "category": "error_codes",
+  "description": "HandshakeRequest with `version` set to a protocol version the verifier does not support. Verifier MUST reject with protocol_version_unsupported at the schema/version step.",
+  "spec_references": ["§5", "§9.1"],
+  "context": {
+    "now": "2026-04-29T14:14:32Z",
+    "public_keys": {
+      "did:hsk:user:alice@example.com": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE",
+      "did:hsk:agent:agent1": "MCowBQYDK2VwAyEAEpiVxKEjy_g0qeg6vXzZ8FNhTzVz6bxBKRZP-Q5xDLs",
+      "did:hsk:svc:receiver": "MCowBQYDK2VwAyEAVKnQg9z9d3xqBGsJpFvjQs3z6n8KaTpRZxsCQwGr4xY"
+    },
+    "registry_state": { "revoked_delegations": [], "revoked_principals": [] }
+  },
+  "input": {
+    "delegation": {
+      "version": "0.2.3",
+      "kind": "DelegationToken",
+      "id": "dt_005",
+      "iss": "did:hsk:user:alice@example.com",
+      "sub": "did:hsk:agent:agent1",
+      "aud": "did:hsk:agent:agent1",
+      "iat": "2026-04-29T14:02:11Z",
+      "nbf": "2026-04-29T14:02:11Z",
+      "exp": "2026-04-29T14:32:11Z",
+      "capabilities": [
+        { "name": "billing.invoices.read", "constraints": { "max_invoices": 100 }, "delegable": false }
+      ],
+      "sub_delegation_depth_remaining": 0,
+      "alg": "EdDSA",
+      "signature": "TEST_VECTOR_SIGNATURE_005_DELEGATION"
+    },
+    "request": {
+      "version": "9.9.9",
+      "kind": "HandshakeRequest",
+      "id": "hs_005",
+      "iss": "did:hsk:agent:agent1",
+      "aud": "did:hsk:svc:receiver",
+      "iat": "2026-04-29T14:14:32Z",
+      "nonce": "nonce-005",
+      "agent_attestation": { "deployer": "did:hsk:org:o", "model": "claude-sonnet-4-5", "instance_id": "job-005" },
+      "capability": { "name": "billing.invoices.read", "constraints": { "max_invoices": 50 } },
+      "delegation_chain": [{ "$ref_vector_local": "delegation" }],
+      "alg": "EdDSA",
+      "signature": "TEST_VECTOR_SIGNATURE_005_REQUEST"
+    }
+  },
+  "expected": {
+    "result": "reject",
+    "error_code": "protocol_version_unsupported",
+    "rejected_at_step": "schema_validation"
+  }
+}

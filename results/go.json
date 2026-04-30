@@ -6,6 +6,58 @@
     "signature_match": true,
     "verifies": true
   },
+  "error_code_vectors": [
+    {
+      "actual_error_code": "aud_mismatch",
+      "actual_rejected_at_step": "audience_check",
+      "actual_result": "reject",
+      "detail": "request aud=did:hsk:svc:wrong-audience does not match receiver did:hsk:svc:expected-receiver",
+      "expected_error_code": "aud_mismatch",
+      "expected_result": "reject",
+      "passed": true,
+      "vector_id": "004-aud-mismatch"
+    },
+    {
+      "actual_error_code": "protocol_version_unsupported",
+      "actual_rejected_at_step": "schema_validation",
+      "actual_result": "reject",
+      "detail": "expected version=0.2.3, got 9.9.9",
+      "expected_error_code": "protocol_version_unsupported",
+      "expected_result": "reject",
+      "passed": true,
+      "vector_id": "005-protocol-version-unsupported"
+    },
+    {
+      "actual_error_code": "credential_revoked",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "actual_result": "reject",
+      "detail": "issuer principal did:hsk:user:alice@example.com is revoked",
+      "expected_error_code": "credential_revoked",
+      "expected_result": "reject",
+      "passed": true,
+      "vector_id": "006-credential-revoked"
+    },
+    {
+      "actual_error_code": "chain_broken",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "actual_result": "reject",
+      "detail": "link iss=did:hsk:user:mallory@example.com does not match prior link sub=did:hsk:agent:agent1",
+      "expected_error_code": "chain_broken",
+      "expected_result": "reject",
+      "passed": true,
+      "vector_id": "007-chain-broken"
+    },
+    {
+      "actual_error_code": "not_yet_valid",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "actual_result": "reject",
+      "detail": "delegation nbf=2026-04-29T15:00:00Z is in the future relative to now=2026-04-29T14:14:32Z (±60s)",
+      "expected_error_code": "not_yet_valid",
+      "expected_result": "reject",
+      "passed": true,
+      "vector_id": "008-not-yet-valid"
+    }
+  ],
   "implementation": "go",
   "jcs_fixtures": [
     {

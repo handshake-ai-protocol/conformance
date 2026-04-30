@@ -34,6 +34,7 @@ function hash(value) {
 
 const FIXTURES = resolve(ROOT, "tests/conformance/fixtures/jcs.json");
 const VECTORS_DIR = resolve(ROOT, "packages/handshake-spec/test-vectors/v0.2.3/core");
+const ERROR_CODES_DIR = resolve(ROOT, "tests/conformance/error_codes");
 const VECTOR_001 = resolve(VECTORS_DIR, "001-valid-handshake.json");
 // Same vector set as the Rust conformance runner.
 const VECTOR_FILES = [
@@ -237,7 +238,11 @@ async function runVector(vectorId, vectorPath) {
     };
   });
 
-  const result = verifyHandshakeRequest(signedRequest, pubKeys, signedRequest.aud, context.now, {
+  // Some error-code vectors (e.g. 004 aud_mismatch) deliberately set
+  // request.aud to a DID *different* from the receiver. Honour an explicit
+  // `input.receiver_did` override; otherwise default to request.aud.
+  const receiverDid = input.receiver_did ?? signedRequest.aud;
+  const result = verifyHandshakeRequest(signedRequest, pubKeys, receiverDid, context.now, {
     revokedPrincipals,
     revokedDelegations,
   });
@@ -273,6 +278,26 @@ async function runVectors() {
   const out = [];
   for (const [id, fname] of VECTOR_FILES) {
     out.push(await runVector(id, resolve(VECTORS_DIR, fname)));
+  }
+  return out;
+}
+
+// Walk tests/conformance/error_codes/*.json — malformed inputs whose only job
+// is to assert that every implementation returns the *same* errorCode at the
+// *same* rejected_at_step. The aggregator builds a cross-impl agreement matrix.
+async function runErrorCodeVectors() {
+  const fs = await import("node:fs/promises");
+  let entries;
+  try {
+    entries = await fs.readdir(ERROR_CODES_DIR);
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const fname of entries.filter((f) => f.endsWith(".json")).sort()) {
+    const path = resolve(ERROR_CODES_DIR, fname);
+    const v = JSON.parse(await fs.readFile(path, "utf8"));
+    out.push(await runVector(v.vector_id ?? fname.replace(/\.json$/, ""), path));
   }
   return out;
 }
@@ -342,6 +367,7 @@ const report = {
   mldsa65_kat: await runMlDsa65Kat(),
   vector_001: await runVector001(),
   vectors: await runVectors(),
+  error_code_vectors: await runErrorCodeVectors(),
   replay_check: await runReplayCheck(),
 };
 process.stdout.write(JSON.stringify(report, null, 2) + "\n");

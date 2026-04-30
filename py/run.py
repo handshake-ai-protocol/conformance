@@ -37,6 +37,7 @@ import handshake  # noqa: E402
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "jcs.json"
 VECTORS_DIR = ROOT / "packages" / "handshake-spec" / "test-vectors" / "v0.2.3" / "core"
+ERROR_CODES_DIR = ROOT / "tests" / "conformance" / "error_codes"
 VECTOR_001 = VECTORS_DIR / "001-valid-handshake.json"
 # Same vector set as the Rust conformance runner (kept in lock-step so the
 # Phase 2 dashboard can substring-match across implementations).
@@ -232,7 +233,10 @@ def _run_vector(vector_id: str, vector_path: Path) -> dict[str, Any]:
     signed_request = _sign_request(request, seed_keys)
 
     pub_keys = {did: pub for did, (_seed, pub) in seed_keys.items()}
-    receiver_did = signed_request["aud"]
+    # Some error-code vectors (e.g. 004 aud_mismatch) deliberately set
+    # request.aud to a DID *different* from the receiver. Honour an explicit
+    # `input.receiver_did` override; otherwise default to request.aud.
+    receiver_did = inp.get("receiver_did", signed_request["aud"])
     now = context["now"]
 
     result = verify_handshake_request(
@@ -271,6 +275,20 @@ def _run_vector(vector_id: str, vector_path: Path) -> dict[str, Any]:
 
 def _run_all_vectors() -> list[dict[str, Any]]:
     return [_run_vector(vid, VECTORS_DIR / fname) for vid, fname in VECTOR_FILES]
+
+
+def _run_error_code_vectors() -> list[dict[str, Any]]:
+    """Walk tests/conformance/error_codes/*.json — malformed inputs whose only
+    job is to assert that every implementation returns the *same* errorCode
+    string at the *same* rejected_at_step. The aggregator turns this into a
+    cross-impl agreement matrix in the Phase 2 dashboard."""
+    if not ERROR_CODES_DIR.exists():
+        return []
+    out = []
+    for path in sorted(ERROR_CODES_DIR.glob("*.json")):
+        v = json.loads(path.read_text())
+        out.append(_run_vector(v.get("vector_id", path.stem), path))
+    return out
 
 
 def _run_replay_check() -> dict[str, Any]:
@@ -338,6 +356,7 @@ def main() -> None:
         "mldsa65_kat": _run_mldsa65_kat(),
         "vector_001": _run_vector_001(),
         "vectors": _run_all_vectors(),
+        "error_code_vectors": _run_error_code_vectors(),
         "replay_check": _run_replay_check(),
     }
     json.dump(report, sys.stdout, indent=2)

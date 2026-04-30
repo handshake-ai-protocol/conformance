@@ -1,0 +1,54 @@
+{
+  "vector_id": "008-not-yet-valid",
+  "spec_version": "0.2.3",
+  "category": "error_codes",
+  "description": "Delegation whose `nbf` (not-before) timestamp is in the future relative to the receiver's now. Verifier MUST reject with not_yet_valid at the delegation_chain_walk step.",
+  "spec_references": ["§6.5", "§9.1"],
+  "context": {
+    "now": "2026-04-29T14:14:32Z",
+    "public_keys": {
+      "did:hsk:user:alice@example.com": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE",
+      "did:hsk:agent:agent1": "MCowBQYDK2VwAyEAEpiVxKEjy_g0qeg6vXzZ8FNhTzVz6bxBKRZP-Q5xDLs",
+      "did:hsk:svc:receiver": "MCowBQYDK2VwAyEAVKnQg9z9d3xqBGsJpFvjQs3z6n8KaTpRZxsCQwGr4xY"
+    },
+    "registry_state": { "revoked_delegations": [], "revoked_principals": [] }
+  },
+  "input": {
+    "delegation": {
+      "version": "0.2.3",
+      "kind": "DelegationToken",
+      "id": "dt_008",
+      "iss": "did:hsk:user:alice@example.com",
+      "sub": "did:hsk:agent:agent1",
+      "aud": "did:hsk:agent:agent1",
+      "iat": "2026-04-29T15:00:00Z",
+      "nbf": "2026-04-29T15:00:00Z",
+      "exp": "2026-04-29T16:00:00Z",
+      "capabilities": [
+        { "name": "billing.invoices.read", "constraints": { "max_invoices": 100 }, "delegable": false }
+      ],
+      "sub_delegation_depth_remaining": 0,
+      "alg": "EdDSA",
+      "signature": "TEST_VECTOR_SIGNATURE_008_DELEGATION"
+    },
+    "request": {
+      "version": "0.2.3",
+      "kind": "HandshakeRequest",
+      "id": "hs_008",
+      "iss": "did:hsk:agent:agent1",
+      "aud": "did:hsk:svc:receiver",
+      "iat": "2026-04-29T14:14:32Z",
+      "nonce": "nonce-008",
+      "agent_attestation": { "deployer": "did:hsk:org:o", "model": "claude-sonnet-4-5", "instance_id": "job-008" },
+      "capability": { "name": "billing.invoices.read", "constraints": { "max_invoices": 50 } },
+      "delegation_chain": [{ "$ref_vector_local": "delegation" }],
+      "alg": "EdDSA",
+      "signature": "TEST_VECTOR_SIGNATURE_008_REQUEST"
+    }
+  },
+  "expected": {
+    "result": "reject",
+    "error_code": "not_yet_valid",
+    "rejected_at_step": "delegation_chain_walk"
+  }
+}

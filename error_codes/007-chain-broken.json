@@ -1,0 +1,75 @@
+{
+  "vector_id": "007-chain-broken",
+  "spec_version": "0.2.3",
+  "category": "error_codes",
+  "description": "Two-link delegation chain where the second link's `iss` does not equal the first link's `sub` — a classic chain-splice attack. Verifier MUST reject with chain_broken at the delegation_chain_walk step.",
+  "spec_references": ["§7.3", "§9.1"],
+  "context": {
+    "now": "2026-04-29T14:14:32Z",
+    "public_keys": {
+      "did:hsk:user:alice@example.com": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE",
+      "did:hsk:user:mallory@example.com": "MCowBQYDK2VwAyEAFc8FDXnCAg7HRcsCa8x8mthSqrpwurcMEGw5sYBxAvF",
+      "did:hsk:agent:agent1": "MCowBQYDK2VwAyEAEpiVxKEjy_g0qeg6vXzZ8FNhTzVz6bxBKRZP-Q5xDLs",
+      "did:hsk:agent:agent2": "MCowBQYDK2VwAyEAFqiWyLFky_g1qfh7vYz_9GOiUzWa7cyCKSZQ-R6yEMt",
+      "did:hsk:svc:receiver": "MCowBQYDK2VwAyEAVKnQg9z9d3xqBGsJpFvjQs3z6n8KaTpRZxsCQwGr4xY"
+    },
+    "registry_state": { "revoked_delegations": [], "revoked_principals": [] }
+  },
+  "input": {
+    "delegation_chain": [
+      {
+        "version": "0.2.3",
+        "kind": "DelegationToken",
+        "id": "dt_007a",
+        "iss": "did:hsk:user:alice@example.com",
+        "sub": "did:hsk:agent:agent1",
+        "aud": "did:hsk:agent:agent1",
+        "iat": "2026-04-29T14:02:11Z",
+        "nbf": "2026-04-29T14:02:11Z",
+        "exp": "2026-04-29T14:32:11Z",
+        "capabilities": [
+          { "name": "billing.invoices.read", "constraints": { "max_invoices": 100 }, "delegable": true }
+        ],
+        "sub_delegation_depth_remaining": 1,
+        "alg": "EdDSA",
+        "signature": "TEST_VECTOR_SIGNATURE_007A_DELEGATION"
+      },
+      {
+        "version": "0.2.3",
+        "kind": "DelegationToken",
+        "id": "dt_007b",
+        "iss": "did:hsk:user:mallory@example.com",
+        "sub": "did:hsk:agent:agent2",
+        "aud": "did:hsk:agent:agent2",
+        "iat": "2026-04-29T14:03:00Z",
+        "nbf": "2026-04-29T14:03:00Z",
+        "exp": "2026-04-29T14:33:00Z",
+        "capabilities": [
+          { "name": "billing.invoices.read", "constraints": { "max_invoices": 50 }, "delegable": false }
+        ],
+        "sub_delegation_depth_remaining": 0,
+        "alg": "EdDSA",
+        "signature": "TEST_VECTOR_SIGNATURE_007B_DELEGATION"
+      }
+    ],
+    "request": {
+      "version": "0.2.3",
+      "kind": "HandshakeRequest",
+      "id": "hs_007",
+      "iss": "did:hsk:agent:agent2",
+      "aud": "did:hsk:svc:receiver",
+      "iat": "2026-04-29T14:14:32Z",
+      "nonce": "nonce-007",
+      "agent_attestation": { "deployer": "did:hsk:org:o", "model": "claude-sonnet-4-5", "instance_id": "job-007" },
+      "capability": { "name": "billing.invoices.read", "constraints": { "max_invoices": 25 } },
+      "delegation_chain": [],
+      "alg": "EdDSA",
+      "signature": "TEST_VECTOR_SIGNATURE_007_REQUEST"
+    }
+  },
+  "expected": {
+    "result": "reject",
+    "error_code": "chain_broken",
+    "rejected_at_step": "delegation_chain_walk"
+  }
+}
