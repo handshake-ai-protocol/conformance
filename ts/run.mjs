@@ -277,6 +277,63 @@ async function runVectors() {
   return out;
 }
 
+// Cross-call replay protection check: verify vector 001 twice in a row through
+// the NAPI-RS FFI. Backed by the Rust core's process-shared default nonce store
+// (see handshake-rs/src/verify.rs::default_nonce_store). First call must
+// accept; second must reject with replay_detected.
+async function runReplayCheck() {
+  const v = JSON.parse(await readFile(resolve(VECTORS_DIR, "001-valid-handshake.json"), "utf8"));
+  const context = v.context;
+  const publicKeys = context.public_keys;
+
+  const seedKeys = {};
+  for (const did of Object.keys(publicKeys)) {
+    const seed = native.sha256(Buffer.from(did, "utf8"));
+    const kp = native.ed25519KeypairFromSeed(seed);
+    seedKeys[did] = { seed, publicKey: kp.publicKey };
+  }
+
+  const input = v.input;
+  const signedChain = [];
+  if (input.delegation) signedChain.push(signLink(input.delegation, seedKeys));
+  for (const link of input.delegation_chain ?? []) signedChain.push(signLink(link, seedKeys));
+
+  const request = { ...input.request, delegation_chain: signedChain };
+  const signedRequest = signRequest(request, seedKeys);
+  const pubKeys = {};
+  for (const [did, k] of Object.entries(seedKeys)) pubKeys[did] = k.publicKey;
+
+  const { verifyHandshakeRequest } = await import("../../../packages/handshake-ts/ts/verify.ts").catch(() => ({
+    verifyHandshakeRequest: (req, keys, recv, now, opts = {}) => {
+      const payload = native.verifyHandshakeRequestJson(
+        JSON.stringify(req), keys, recv, now,
+        opts.revokedPrincipals ?? [], opts.revokedDelegations ?? [],
+      );
+      return JSON.parse(payload);
+    },
+  }));
+
+  const first = verifyHandshakeRequest(signedRequest, pubKeys, signedRequest.aud, context.now, {
+    revokedPrincipals: [], revokedDelegations: [],
+  });
+  const second = verifyHandshakeRequest(signedRequest, pubKeys, signedRequest.aud, context.now, {
+    revokedPrincipals: [], revokedDelegations: [],
+  });
+  const firstResult = first.result;
+  const secondResult = second.result;
+  const secondErrorCode = second.error_code ?? null;
+  const passed =
+    firstResult === "accept" &&
+    secondResult === "reject" &&
+    secondErrorCode === "replay_detected";
+  return {
+    first_result: firstResult,
+    second_result: secondResult,
+    second_error_code: secondErrorCode,
+    passed,
+  };
+}
+
 const report = {
   implementation: "typescript",
   spec_version: native.SPEC_VERSION,
@@ -285,5 +342,6 @@ const report = {
   mldsa65_kat: await runMlDsa65Kat(),
   vector_001: await runVector001(),
   vectors: await runVectors(),
+  replay_check: await runReplayCheck(),
 };
 process.stdout.write(JSON.stringify(report, null, 2) + "\n");

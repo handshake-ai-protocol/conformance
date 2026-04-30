@@ -158,5 +158,11 @@
       "detail": "requested max_invoices=500 exceeds delegated max 100",
       "passed": true
     }
-  ]
+  ],
+  "replay_check": {
+    "first_result": "accept",
+    "second_result": "reject",
+    "second_error_code": "replay_detected",
+    "passed": true
+  }
 }

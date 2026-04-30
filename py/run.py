@@ -273,6 +273,62 @@ def _run_all_vectors() -> list[dict[str, Any]]:
     return [_run_vector(vid, VECTORS_DIR / fname) for vid, fname in VECTOR_FILES]
 
 
+def _run_replay_check() -> dict[str, Any]:
+    """Verify vector 001 twice via the FFI's process-shared nonce store.
+
+    First call must accept; second must reject with `replay_detected`.
+    """
+    from handshake.verify import verify_handshake_request
+
+    v = json.loads((VECTORS_DIR / "001-valid-handshake.json").read_text())
+    context = v["context"]
+    public_keys = context["public_keys"]
+
+    seed_keys: dict[str, tuple[bytes, bytes]] = {}
+    for did in public_keys:
+        seed = handshake.sha256(did.encode("utf-8"))
+        seed_pair, pub = handshake.ed25519_keypair_from_seed(seed)
+        seed_keys[did] = (seed_pair, pub)
+
+    inp = v["input"]
+    signed_chain = []
+    if "delegation" in inp:
+        signed_chain.append(_sign_link(inp["delegation"], seed_keys))
+    for link in inp.get("delegation_chain", []):
+        signed_chain.append(_sign_link(link, seed_keys))
+
+    request = dict(inp["request"])
+    request["delegation_chain"] = signed_chain
+    signed_request = _sign_request(request, seed_keys)
+
+    pub_keys = {did: pub for did, (_seed, pub) in seed_keys.items()}
+    receiver_did = signed_request["aud"]
+    now = context["now"]
+
+    first = verify_handshake_request(
+        signed_request, keys=pub_keys, receiver_did=receiver_did, now=now,
+        revoked_principals=[], revoked_delegations=[],
+    )
+    second = verify_handshake_request(
+        signed_request, keys=pub_keys, receiver_did=receiver_did, now=now,
+        revoked_principals=[], revoked_delegations=[],
+    )
+    first_result = "accept" if first.accepted else "reject"
+    second_result = "accept" if second.accepted else "reject"
+    second_error_code = None if second.accepted else second.error_code
+    passed = (
+        first_result == "accept"
+        and second_result == "reject"
+        and second_error_code == "replay_detected"
+    )
+    return {
+        "first_result": first_result,
+        "second_result": second_result,
+        "second_error_code": second_error_code,
+        "passed": bool(passed),
+    }
+
+
 def main() -> None:
     report = {
         "implementation": "python",
@@ -282,6 +338,7 @@ def main() -> None:
         "mldsa65_kat": _run_mldsa65_kat(),
         "vector_001": _run_vector_001(),
         "vectors": _run_all_vectors(),
+        "replay_check": _run_replay_check(),
     }
     json.dump(report, sys.stdout, indent=2)
     sys.stdout.write("\n")

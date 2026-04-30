@@ -120,6 +120,12 @@
     "signature_size": 3309,
     "verifies": true
   },
+  "replay_check": {
+    "first_result": "accept",
+    "passed": true,
+    "second_error_code": "replay_detected",
+    "second_result": "reject"
+  },
   "spec_version": "0.2.3",
   "vector_001": {
     "passed": true,

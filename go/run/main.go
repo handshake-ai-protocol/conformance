@@ -401,6 +401,81 @@ func runVectors(rootDir string) []map[string]any {
         return out
 }
 
+// Cross-call replay protection: verify vector 001 twice in a row reusing a
+// single nonce store. First call must accept; second must reject with
+// `replay_detected`. Mirrors what the Py / TS runners assert against the
+// FFI's process-shared default store.
+func runReplayCheck(rootDir string) map[string]any {
+        var v map[string]any
+        mustReadJSON(filepath.Join(rootDir, "packages/handshake-spec/test-vectors/v0.2.3/core/001-valid-handshake.json"), &v)
+        context := v["context"].(map[string]any)
+        publicKeys := context["public_keys"].(map[string]any)
+        seedKeys := deriveKeys(publicKeys)
+
+        input := v["input"].(map[string]any)
+        var signedChain []any
+        if d, ok := input["delegation"].(map[string]any); ok {
+                signedChain = append(signedChain, signLink(d, seedKeys))
+        }
+        if dc, ok := input["delegation_chain"].([]any); ok {
+                for _, link := range dc {
+                        signedChain = append(signedChain, signLink(link.(map[string]any), seedKeys))
+                }
+        }
+        request := cloneMap(input["request"].(map[string]any))
+        request["delegation_chain"] = signedChain
+        signedRequest := signRequest(request, seedKeys)
+
+        rawReq, err := json.Marshal(signedRequest)
+        if err != nil {
+                panic(err)
+        }
+        var req models.HandshakeRequest
+        if err := json.Unmarshal(rawReq, &req); err != nil {
+                panic(err)
+        }
+
+        resolver := verifyPkg.NewStaticKeyResolver()
+        for did, kp := range seedKeys {
+                resolver.Insert(did, []byte(kp.pub))
+        }
+        now, err := time.Parse(time.RFC3339, context["now"].(string))
+        if err != nil {
+                panic(err)
+        }
+
+        // ONE nonce store, TWO verify calls.
+        nonces := verifyPkg.NewInMemoryNonceStore(120)
+        ctx := &verifyPkg.Context{
+                ReceiverDID: req.Aud,
+                Now:         now,
+                SkewSecs:    verifyPkg.DefaultSkewSecs,
+                Keys:        resolver,
+                Nonces:      nonces,
+                Revocations: &verifyPkg.StaticRevocationResolver{},
+        }
+        first := verifyPkg.VerifyHandshakeRequest(&req, ctx)
+        second := verifyPkg.VerifyHandshakeRequest(&req, ctx)
+
+        firstResult := "accept"
+        if !first.Accepted() {
+                firstResult = "reject"
+        }
+        secondResult := "accept"
+        var secondErrorCode any
+        if !second.Accepted() {
+                secondResult = "reject"
+                secondErrorCode = string(second.Refusal.ErrorCode)
+        }
+        passed := firstResult == "accept" && secondResult == "reject" && secondErrorCode == "replay_detected"
+        return map[string]any{
+                "first_result":       firstResult,
+                "second_result":      secondResult,
+                "second_error_code":  secondErrorCode,
+                "passed":             passed,
+        }
+}
+
 func main() {
         root := os.Getenv("REPO_ROOT")
         if root == "" {
@@ -414,6 +489,7 @@ func main() {
                 "mldsa65_kat":    runMLDSA65KAT(root),
                 "vector_001":     runVector001(root),
                 "vectors":        runVectors(root),
+                "replay_check":   runReplayCheck(root),
         }
         enc := json.NewEncoder(os.Stdout)
         enc.SetIndent("", "  ")
