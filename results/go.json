@@ -56,6 +56,16 @@
       "expected_result": "reject",
       "passed": true,
       "vector_id": "008-not-yet-valid"
+    },
+    {
+      "actual_error_code": "chain_broken",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "actual_result": "reject",
+      "detail": "intermediate delegation: capability billing.invoices.read is not delegable on this link",
+      "expected_error_code": "chain_broken",
+      "expected_result": "reject",
+      "passed": true,
+      "vector_id": "009-non-delegable-capability"
     }
   ],
   "implementation": "go",

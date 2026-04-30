@@ -209,6 +209,16 @@
       "actual_rejected_at_step": "delegation_chain_walk",
       "detail": "delegation nbf=2026-04-29T15:00:00Z is in the future relative to now=2026-04-29 14:14:32 UTC (±60s)",
       "passed": true
+    },
+    {
+      "vector_id": "009-non-delegable-capability",
+      "expected_result": "reject",
+      "expected_error_code": "chain_broken",
+      "actual_result": "reject",
+      "actual_error_code": "chain_broken",
+      "actual_rejected_at_step": "delegation_chain_walk",
+      "detail": "intermediate delegation: capability billing.invoices.read is not delegable on this link",
+      "passed": true
     }
   ],
   "replay_check": {
