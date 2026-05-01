@@ -130,7 +130,7 @@
     "message_hex": "",
     "signature_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
   },
-  "_mldsa65_kat_comment": "ML-DSA-65 (FIPS 204) deterministic KAT. Each runner derives the keypair from the 32-byte seed (FIPS 204 ξ), then deterministically signs the message (FIPS 204 §5.5 with empty context). Wire-format byte-equality is verified by hashing the public key (1952 B) and signature (3309 B) — pinning the digests instead of the raw bytes keeps the fixture file small. Both digests below were produced by the canonical Rust core (RustCrypto `ml-dsa` 0.0.4) AND independently reproduced by the Go core (`cloudflare/circl` v1.6.1) before pinning. Verifies the FIPS 204 keygen + deterministic-signing interop across implementations.",
+  "_mldsa65_kat_comment": "ML-DSA-65 (FIPS 204) deterministic KAT. Each runner derives the keypair from the 32-byte seed (FIPS 204 ξ), then deterministically signs the message (FIPS 204 §5.5 with empty context). Wire-format byte-equality is verified by hashing the public key (1952 B) and signature (3309 B) — pinning the digests instead of the raw bytes keeps the fixture file small. Both digests below were originally produced by the canonical Rust core (RustCrypto `ml-dsa` 0.0.4) AND independently reproduced by the Go core (`cloudflare/circl` v1.6.1) before pinning, and have been re-verified byte-equal under the post-vuln-patch versions (`ml-dsa` 0.1.0-rc.9 and `cloudflare/circl` v1.6.3). Verifies the FIPS 204 keygen + deterministic-signing interop across implementations.",
   "mldsa65_kat": {
     "name": "handshake_mldsa65_deterministic_v1",
     "seed_hex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
