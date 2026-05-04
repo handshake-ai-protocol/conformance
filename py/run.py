@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Python conformance runner.
 
 Reads the shared fixtures + test vector 001 and emits a JSON report on stdout

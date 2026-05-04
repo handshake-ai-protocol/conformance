@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
 // TypeScript / Node conformance runner. Pure ESM, runs from `node` directly.
 // Reads the shared fixtures + test vector 001, emits a JSON report on stdout
 // matching the schema the Rust + Go runners produce.

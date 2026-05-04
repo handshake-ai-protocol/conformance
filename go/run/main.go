@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Go conformance runner. Reads the shared fixtures + test vector 001, emits a
 // JSON report on stdout matching the schema consumed by examples/phase1_demo.sh.
 package main
