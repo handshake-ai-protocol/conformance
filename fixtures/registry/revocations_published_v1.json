@@ -1,0 +1,55 @@
+{
+  "$comment": "Conformance vectors for GET /v1/revocations/published. Each vector is the exact body the Registry returns for the described state. The `signature.value` field is environment-dependent (depends on the Registry's signing seed) and is therefore replaced with the placeholder `<env-dependent>` — verifiers compare envelope SHAPE here, and re-derive + verify the signature against the live Registry's published key in their conformance harness.",
+  "schema": "https://handshake.ai/schemas/v0.2.3/revocations-published-feed.json",
+  "vectors": [
+    {
+      "name": "empty_feed",
+      "description": "No published revocations yet. Envelope MUST still be well-formed and signed.",
+      "body": {
+        "version": 1,
+        "issuer_did": "did:hsk:registry:us-east",
+        "as_of": "2026-05-06T22:00:00Z",
+        "revocations": [],
+        "next_cursor": null,
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "did:hsk:registry:us-east#keys-1",
+          "value": "<env-dependent>"
+        }
+      }
+    },
+    {
+      "name": "two_entries_ordered",
+      "description": "Two published revocations, ordered by revoked_at DESC. Tiebreaker is id DESC.",
+      "body": {
+        "version": 1,
+        "issuer_did": "did:hsk:registry:us-east",
+        "as_of": "2026-05-06T22:00:00Z",
+        "revocations": [
+          {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "subject_did": "did:hsk:agent:bob",
+            "key_id": "#k1",
+            "reason": "rotation",
+            "revoked_at": "2026-05-06T21:00:00Z",
+            "tree_head_id": "th-2026-05-06-002"
+          },
+          {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "subject_did": "did:hsk:agent:alice",
+            "key_id": "#k1",
+            "reason": "compromised",
+            "revoked_at": "2026-05-06T20:00:00Z",
+            "tree_head_id": "th-2026-05-06-001"
+          }
+        ],
+        "next_cursor": null,
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "did:hsk:registry:us-east#keys-1",
+          "value": "<env-dependent>"
+        }
+      }
+    }
+  ]
+}
