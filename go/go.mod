@@ -2,7 +2,7 @@ module github.com/handshake-protocol/handshake-ai/tests/conformance/go
 
 go 1.26.2
 
-require github.com/handshake-protocol/handshake-ai/packages/handshake-go v0.0.0
+require github.com/handshake-ai-protocol/go v0.0.0
 
 require (
 	github.com/cloudflare/circl v1.6.3 // indirect
@@ -20,4 +20,4 @@ require (
 // Resolve the SDK from the local checkout so the conformance runner builds
 // without needing a published module version. go.work also lists this module,
 // but the replace makes plain `go build` (without workspace mode) work too.
-replace github.com/handshake-protocol/handshake-ai/packages/handshake-go => ../../../packages/handshake-go
+replace github.com/handshake-ai-protocol/go => ../../../packages/handshake-go
